@@ -22,7 +22,7 @@ class RegistrationController extends AbstractController
     {
 	    $email = $request->get('email');
 	    $user = $userRepository->findOneBy(['email' => $email]);
-		if ($user === null)
+		if ($user !== null)
 			return new JsonResponse(['error'=>'User with this email already exist.'], Response::HTTP_BAD_REQUEST);
 	    $user = new User();
 		if (!str_ends_with($email, "unipa.it"))
