@@ -20,8 +20,11 @@ class RegistrationController extends AbstractController
     #[Route('/registration', name: 'app_registration', methods: "POST")]
     public function registration(Request $request, UserPasswordHasherInterface $hasher, UserRepository $userRepository): Response
     {
-	    $user = new User();
 	    $email = $request->get('email');
+	    $user = $userRepository->findOneBy(['email' => $email]);
+		if ($user === null)
+			return new JsonResponse(['error'=>'User with this email already exist.'], Response::HTTP_BAD_REQUEST);
+	    $user = new User();
 		if (!str_ends_with($email, "unipa.it"))
 			return new JsonResponse(['error'=>'email error'], Response::HTTP_BAD_REQUEST);
 	    $user->setEmail($email);
