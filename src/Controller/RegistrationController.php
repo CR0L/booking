@@ -7,18 +7,18 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 class RegistrationController extends AbstractController
 {
     #[Route('/registration', name: 'app_registration', methods: "POST")]
-    public function registration(Request $request, UserPasswordHasherInterface $hasher, UserRepository $userRepository): Response
+    public function registration(Request $request, UserPasswordHasherInterface $hasher, UserRepository $userRepository, MailerInterface $mailer): Response
     {
 		$post = json_decode($request->getContent(), true);
 	    $email = $post['email'];
@@ -35,9 +35,16 @@ class RegistrationController extends AbstractController
 	    try {
 		    $userRepository->add($user);
 	    } catch (OptimisticLockException|ORMException $e) {
-			throw new BadRequestHttpException();
 		    return new JsonResponse(['error'=>'Unable to create user'], Response::HTTP_BAD_REQUEST);
 	    }
+
+	    $email = (new Email())
+		    ->from('ololo@ololo.com')
+		    ->to($email)
+		    ->subject('Please confirm your email')
+		    ->html('<p>Please confirm your email address by clicking the following link:</p><br><a href=""></a>');
+
+	    $mailer->send($email);
 
 	    return $this->json([
             'message' => 'User successfully registered'
