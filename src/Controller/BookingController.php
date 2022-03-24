@@ -6,12 +6,12 @@ use App\Entity\Classroom;
 use App\Entity\ClassroomReservation;
 use App\Entity\LectureReservation;
 use App\Entity\User;
+use App\Repository\ClassroomRepository;
 use App\Repository\ClassroomReservationRepository;
 use DateInterval;
 use DateTime;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -28,20 +28,36 @@ class BookingController extends AbstractController
 	public function __construct(
 		private Security $security,
 		private ClassroomReservationRepository $classroomReservationRepository,
-		private SerializerInterface $serializer,
+		private ClassroomRepository $classroomRepository,
 		private EntityManagerInterface $em
 	) {}
 
-	#[Route('/booking')]
-    #[IsGranted('ROLE_USER')]
-    public function index(): Response {
-        return $this->json([
-            'message' => 'Welcome to your new controller!',
-            'path' => 'src/Controller/BookingController.php',
-        ]);
-    }
+	#[Route('/classrooms', methods: 'GET')]
+	public function classrooms(): Response {
+		$classrooms = $this->classroomRepository->findAll();
+		return $this->json($classrooms,200, [], ["groups" => ["classroom"]]);
+	}
 
-	#[Route('/classroomReservations/{classroomReservation}/book')]
+	#[Route('/classrooms', methods: 'POST')]
+	public function newClassroom(Request $request): Response {
+		$post = json_decode($request->getContent(), true);
+		$label = $post['label'];
+
+		$classroom = new Classroom();
+		$classroom->setLabel($label);
+		$classroomReservation = new ClassroomReservation();
+		$classroomReservation->setClassroom($classroom);
+		$classroomReservation->setStart(new DateTime());
+		$classroomReservation->setEnd((new DateTime())->add(new DateInterval('P1000Y')));
+		$this->em->persist($classroom);
+		$this->em->persist($classroomReservation);
+		$this->em->flush();
+		return $this->json([
+			'message' => "Classroom '{$label}' was created successfully."
+		]);
+	}
+
+	#[Route('/classroomReservations/{classroomReservation}/book', methods: 'GET')]
 	#[IsGranted('ROLE_USER')]
 	public function lectureReservation(ClassroomReservation $classroomReservation): Response {
 		/** @var User $user */
@@ -62,7 +78,7 @@ class BookingController extends AbstractController
 		return new JsonResponse(['message'=>"Booked successfully"]);
 	}
 
-	#[Route('/classroomReservations')]
+	#[Route('/classroomReservations', methods: 'GET')]
 	public function classroomReservations(): Response {
 		/** @var User $user */
 		$user = $this->security->getUser();
@@ -73,26 +89,44 @@ class BookingController extends AbstractController
 		return $this->json($classroomReservations,200, [], ["groups" => ["classroomReservation"]]);
 	}
 
-	#[Route('/classroomReservations/{classroomReservation}/new', methods: 'POST')]
+	#[Route('/classroomReservations', methods: 'POST')]
+	//#[IsGranted('ROLE_USER')]
+	public function newClassroomReservation(Request $request): Response {
 
-	public function newClassroomReservation(Request $request, ClassroomReservation $classroomReservation): Response {
-		if ($classroomReservation->getReservedBy() !== null)
-			return new JsonResponse(['error'=>"Already booked."], Response::HTTP_BAD_REQUEST);
 		$post = json_decode($request->getContent(), true);
 		$start = new DateTime($post['start']);
 		$end = new DateTime($post['end']);
-		$maxStudents = $post['end'];
+		$maxStudents = $post['maxStudents'];
+		$classroom = $this->classroomRepository->find($post['classroom']);
+
+		if ($classroom === null)
+			return new JsonResponse(['error'=>"Classroom doesn't exist."], Response::HTTP_BAD_REQUEST);
 		if (!is_numeric($maxStudents))
 			return new JsonResponse(['error'=>"maxStudents must be a number"], Response::HTTP_BAD_REQUEST);
-		$classroomReservation->setMaxStudents($maxStudents);
 
 		if($start === false || $end === false)
 			return new JsonResponse(['error'=>"Wrong datetime format."], Response::HTTP_BAD_REQUEST);
 
+		$creteria = Criteria::create()
+			->where(Criteria::expr()->eq('classroom', $classroom))
+			->andWhere(Criteria::expr()->lt('start', $end))
+			->andWhere(Criteria::expr()->gt('end', $start));
+		$classroomReservations = $this->classroomReservationRepository->matching($creteria);
+
+		if ($classroomReservations->count() === 0)
+			return new JsonResponse(['error'=>"No lectures found."], Response::HTTP_BAD_REQUEST);
+		elseif ($classroomReservations->count() > 1)
+			return new JsonResponse(['error'=>"More then one lectures found."], Response::HTTP_BAD_REQUEST);
+
+		/** @var ClassroomReservation $classroomReservation */
+		$classroomReservation = $classroomReservations->first();
+
+		if ($classroomReservation->getReservedBy() !== null)
+			return new JsonResponse(['error'=>"Already booked."], Response::HTTP_BAD_REQUEST);
+		$classroomReservation->setMaxStudents($maxStudents);
 		if ($end > $classroomReservation->getEnd() || $start < $classroomReservation->getStart()) {
 			return new JsonResponse(['error'=>"Wrong datetime interval."], Response::HTTP_BAD_REQUEST);
 		}
-
 		/** @var User $user */
 		$user = $this->security->getUser();
 		$classroomReservation->setReservedBy($user);
@@ -142,22 +176,4 @@ class BookingController extends AbstractController
 		$this->em->flush();
 		return $this->json($classroomReservation,200, [], ["groups" => ["classroomReservation"]]);
 	}
-
-	#[Route('/classrooms/new/{label}')]
-	public function newClassroom(string $label): Response {
-		$classroom = new Classroom();
-		$classroom->setLabel($label);
-		$classroomReservation = new ClassroomReservation();
-		$classroomReservation->setClassroom($classroom);
-		$classroomReservation->setStart(new DateTime());
-		$classroomReservation->setEnd((new DateTime())->add(new DateInterval('P1000Y')));
-		$this->em->persist($classroom);
-		$this->em->persist($classroomReservation);
-		$this->em->flush();
-		return $this->json([
-			'message' => "Classroom '{$label}' was created successfully."
-		]);
-	}
-
-
 }

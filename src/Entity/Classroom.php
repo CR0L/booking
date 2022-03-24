@@ -14,11 +14,11 @@ class Classroom
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    #[Groups(['classroomReservation'])]
+    #[Groups(['classroomReservation', 'classroom'])]
     private $id;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(['classroomReservation'])]
+    #[Groups(['classroomReservation', 'classroom'])]
     private $label;
 
     #[ORM\OneToMany(mappedBy: 'classroom', targetEntity: ClassroomReservation::class)]
