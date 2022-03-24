@@ -18,6 +18,7 @@ class Classroom
     private $id;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups(['classroomReservation'])]
     private $label;
 
     #[ORM\OneToMany(mappedBy: 'classroom', targetEntity: ClassroomReservation::class)]

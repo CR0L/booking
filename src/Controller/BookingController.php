@@ -10,6 +10,8 @@ use App\Repository\ClassroomReservationRepository;
 use DateInterval;
 use DateTime;
 use DateTimeInterface;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -57,14 +59,17 @@ class BookingController extends AbstractController
 		$classroomReservation->addLectureReservation($lectureReservation);
 		$this->em->persist($lectureReservation);
 		$this->em->flush();
-		return new JsonResponse(['message'=>"You've successfully booked the lecture."], Response::HTTP_BAD_REQUEST);
+		return new JsonResponse(['message'=>"Booked successfully"]);
 	}
 
 	#[Route('/classroomReservations')]
 	public function classroomReservations(): Response {
 		/** @var User $user */
 		$user = $this->security->getUser();
-		$classroomReservations = $this->classroomReservationRepository->findAll();
+		$classroomReservations = new ArrayCollection($this->classroomReservationRepository->findAll());
+		$classroomReservations = $classroomReservations->filter(function(ClassroomReservation $classroomReservation) {
+			return $classroomReservation->getReservedBy() !== null && $classroomReservation->getLectureReservations()->count() < $classroomReservation->getMaxStudents();
+		});
 		return $this->json($classroomReservations,200, [], ["groups" => ["classroomReservation"]]);
 	}
 
@@ -76,14 +81,21 @@ class BookingController extends AbstractController
 		$post = json_decode($request->getContent(), true);
 		$start = new DateTime($post['start']);
 		$end = new DateTime($post['end']);
+		$maxStudents = $post['end'];
+		if (!is_numeric($maxStudents))
+			return new JsonResponse(['error'=>"maxStudents must be a number"], Response::HTTP_BAD_REQUEST);
+		$classroomReservation->setMaxStudents($maxStudents);
+
 		if($start === false || $end === false)
 			return new JsonResponse(['error'=>"Wrong datetime format."], Response::HTTP_BAD_REQUEST);
+
 		if ($end > $classroomReservation->getEnd() || $start < $classroomReservation->getStart()) {
 			return new JsonResponse(['error'=>"Wrong datetime interval."], Response::HTTP_BAD_REQUEST);
 		}
 
 		/** @var User $user */
 		$user = $this->security->getUser();
+		$classroomReservation->setReservedBy($user);
 
 		if ($classroomReservation->getStart() < $start) {
 			$classroomReservationBefore = new ClassroomReservation();

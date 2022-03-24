@@ -25,11 +25,11 @@ class ClassroomReservation
     #[Groups(['classroomReservation'])]
     private $reservedBy;
 
-    #[ORM\Column(type: 'datetimetz')]
+    #[ORM\Column(type: 'datetime')]
     #[Groups(['classroomReservation'])]
     private $start;
 
-    #[ORM\Column(type: 'datetimetz')]
+    #[ORM\Column(type: 'datetime')]
     #[Groups(['classroomReservation'])]
     private $end;
 
@@ -37,6 +37,7 @@ class ClassroomReservation
     private $lectureReservations;
 
     #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['classroomReservation'])]
     private $maxStudents;
 
     public function __construct()
