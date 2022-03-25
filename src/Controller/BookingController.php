@@ -65,9 +65,6 @@ class BookingController extends AbstractController
 		if ($classroomReservation->getLectureReservations()->count() >= $classroomReservation->getMaxStudents()) {
 			return new JsonResponse(['error'=>'Maximum number of students reached.'], Response::HTTP_BAD_REQUEST);
 		}
-		if ($classroomReservation->getLectureReservations()) {
-			return new JsonResponse(['error'=>"You've already booked this lecture."], Response::HTTP_BAD_REQUEST);
-		}
 		if ($classroomReservation->getClassroom()->getReservations()->exists(function($key, ClassroomReservation $classroomReservation2) use ($user, $classroomReservation) {
 			if (
 				$classroomReservation->getStart()->format('Y-m-d') == $classroomReservation2->getStart()->format('Y-m-d') &&
