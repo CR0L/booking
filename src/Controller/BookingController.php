@@ -65,11 +65,20 @@ class BookingController extends AbstractController
 		if ($classroomReservation->getLectureReservations()->count() >= $classroomReservation->getMaxStudents()) {
 			return new JsonResponse(['error'=>'Maximum number of students reached.'], Response::HTTP_BAD_REQUEST);
 		}
-		if ($classroomReservation->getLectureReservations()->exists(function($key, LectureReservation $lectureReservation) use ($user) {
-			return $lectureReservation->getReservedBy()->getId() === $this->user->getId();
-		})) {
+		if ($classroomReservation->getLectureReservations()) {
 			return new JsonResponse(['error'=>"You've already booked this lecture."], Response::HTTP_BAD_REQUEST);
 		}
+		if ($classroomReservation->getClassroom()->getReservations()->exists(function($key, ClassroomReservation $classroomReservation2) use ($user, $classroomReservation) {
+			if (
+				$classroomReservation->getStart()->format('Y-m-d') == $classroomReservation2->getStart()->format('Y-m-d') &&
+				$classroomReservation2->getLectureReservations()->exists(function($key, LectureReservation $lectureReservation) use ($user) {
+					return $lectureReservation->getReservedBy()->getId() === $user->getId();
+				})
+			)
+				return true;
+			return false;
+		}))
+			return new JsonResponse(['error'=>"You've already booked this lecture this date."], Response::HTTP_BAD_REQUEST);
 		$lectureReservation = new LectureReservation();
 		$lectureReservation->setReservedBy($user);
 		$classroomReservation->addLectureReservation($lectureReservation);
@@ -92,7 +101,6 @@ class BookingController extends AbstractController
 	#[Route('/classroomReservations', methods: 'POST')]
 	//#[IsGranted('ROLE_USER')]
 	public function newClassroomReservation(Request $request): Response {
-
 		$post = json_decode($request->getContent(), true);
 		$start = new DateTime($post['start']);
 		$end = new DateTime($post['end']);
@@ -125,7 +133,13 @@ class BookingController extends AbstractController
 			return new JsonResponse(['error'=>"Already booked."], Response::HTTP_BAD_REQUEST);
 		$classroomReservation->setMaxStudents($maxStudents);
 		if ($end > $classroomReservation->getEnd() || $start < $classroomReservation->getStart()) {
-			return new JsonResponse(['error'=>"Wrong datetime interval."], Response::HTTP_BAD_REQUEST);
+			return new JsonResponse([
+				'error'=>"Wrong datetime interval.",
+				's1'=>$classroomReservation->getStart()->getTimestamp(),
+				's2'=>$start->getTimestamp(),
+				'e1'=>$classroomReservation->getEnd(),
+				'e2'=>$end,
+			], Response::HTTP_BAD_REQUEST);
 		}
 		/** @var User $user */
 		$user = $this->security->getUser();
