@@ -139,4 +139,10 @@ class ClassroomReservation
 
         return $this;
     }
+
+	public function alreadyBookedByUser(User $user): bool {
+		return $this->getLectureReservations()->exists(function($key, LectureReservation $lectureReservation) use ($user) {
+			return $lectureReservation->getReservedBy()->getId() === $user->getId();
+		});
+	}
 }

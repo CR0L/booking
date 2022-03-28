@@ -68,9 +68,7 @@ class BookingController extends AbstractController
 		if ($classroomReservation->getClassroom()->getReservations()->exists(function($key, ClassroomReservation $classroomReservation2) use ($user, $classroomReservation) {
 			if (
 				$classroomReservation->getStart()->format('Y-m-d') == $classroomReservation2->getStart()->format('Y-m-d') &&
-				$classroomReservation2->getLectureReservations()->exists(function($key, LectureReservation $lectureReservation) use ($user) {
-					return $lectureReservation->getReservedBy()->getId() === $user->getId();
-				})
+				$classroomReservation2->alreadyBookedByUser($user)
 			)
 				return true;
 			return false;
@@ -86,13 +84,21 @@ class BookingController extends AbstractController
 
 	#[Route('/classroomReservations', methods: 'GET')]
 	public function classroomReservations(): Response {
-		/** @var User $user */
-		$user = $this->security->getUser();
 		$classroomReservations = new ArrayCollection($this->classroomReservationRepository->findAll());
 		$classroomReservations = $classroomReservations->filter(function(ClassroomReservation $classroomReservation) {
 			return $classroomReservation->getReservedBy() !== null && $classroomReservation->getLectureReservations()->count() < $classroomReservation->getMaxStudents();
 		});
 		return $this->json($classroomReservations,200, [], ["groups" => ["classroomReservation"]]);
+	}
+
+	#[Route('/classroomReservations/my', methods: 'GET')]
+	public function myClassroomReservations(): Response {
+		/** @var User $user */
+		$user = $this->security->getUser();
+		$lectures = $user->getLectures()->map(function (LectureReservation $lectureReservation) {
+			return $lectureReservation->getClassroomReservation();
+		});
+		return $this->json($lectures,200, [], ["groups" => ["classroomReservation"]]);
 	}
 
 	#[Route('/classroomReservations', methods: 'POST')]

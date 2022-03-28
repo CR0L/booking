@@ -31,6 +31,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'reservedBy', targetEntity: ClassroomReservation::class)]
     private $reservations;
 
+	#[ORM\OneToMany(mappedBy: 'reservedBy', targetEntity: LectureReservation::class)]
+	private $lectures;
+
     #[ORM\Column(type: 'boolean')]
     private $confirmed;
 
@@ -138,6 +141,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+	/**
+	 * @return Collection<int, LectureReservation>
+	 */
+	public function getLectures(): Collection
+	{
+		return $this->lectures;
+	}
+
+	public function addLecture(LectureReservation $lectureReservation): self
+	{
+		if (!$this->lectures->contains($lectureReservation)) {
+			$this->lectures[] = $lectureReservation;
+			$lectureReservation->setReservedBy($this);
+		}
+
+		return $this;
+	}
+
+	public function removeLecture(LectureReservation $lectures): self
+	{
+		if ($this->lectures->removeElement($lectures)) {
+			// set the owning side to null (unless already changed)
+			if ($lectures->getReservedBy() === $this) {
+				$lectures->setReservedBy(null);
+			}
+		}
+		return $this;
+	}
 
     public function getConfirmed(): ?bool
     {
