@@ -16,13 +16,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    #[Groups(['classroomReservation'])]
+    #[Groups(['classroomReservation','user'])]
     private $id;
 
     #[ORM\Column(type: 'string', length: 180, unique: true)]
+    #[Groups(['canSeeStudents','user'])]
     private $email;
 
     #[ORM\Column(type: 'json')]
+    #[Groups(['user'])]
     private $roles = [];
 
     #[ORM\Column(type: 'string')]

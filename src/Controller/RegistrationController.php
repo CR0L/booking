@@ -7,6 +7,7 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -67,9 +68,7 @@ class RegistrationController extends AbstractController
 	    return $this->json(['message' => 'User successfully registered']);
     }
 
-	/**
-	 * @Route("/verify", name="registration_confirmation_route")
-	 */
+	#[Route('/verify', name: 'registration_confirmation_route')]
 	public function verifyUserEmail(Request $request): Response
 	{
 		$id = $request->get('id'); // retrieve the user id from the url
@@ -103,5 +102,12 @@ class RegistrationController extends AbstractController
 
 		//return $this->redirectToRoute('app_home');
 		return $this->json(['message' => 'Confirmed!']);
+	}
+
+	#[Route('/profile', methods: "GET")]
+	#[IsGranted('ROLE_USER')]
+	public function getUserEndpoint(Request $request): Response
+	{
+		return $this->json($this->getUser(),200, [], ["groups" => ["user"]]);
 	}
 }
