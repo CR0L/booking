@@ -83,6 +83,7 @@ class BookingController extends AbstractController
 	}
 
 	#[Route('/classroomReservations', methods: 'GET')]
+	#[IsGranted('ROLE_USER')]
 	public function classroomReservations(): Response {
 		$classroomReservations = new ArrayCollection($this->classroomReservationRepository->findAll());
 		$classroomReservations = $classroomReservations->filter(function(ClassroomReservation $classroomReservation) {
@@ -92,13 +93,20 @@ class BookingController extends AbstractController
 	}
 
 	#[Route('/classroomReservations/my', methods: 'GET')]
+	#[IsGranted('ROLE_USER')]
 	public function myClassroomReservations(): Response {
 		/** @var User $user */
 		$user = $this->security->getUser();
-		$lectures = $user->getLectures()->map(function (LectureReservation $lectureReservation) {
-			return $lectureReservation->getClassroomReservation();
-		});
-		return $this->json($lectures,200, [], ["groups" => ["classroomReservation"]]);
+
+		if ($this->isGranted('ROLE_TEACHER')) {
+			$lectures = $user->getReservations();
+			return $this->json($lectures,200, [], ["groups" => ["classroomReservation", "canSeeStudents"]]);
+		} else {
+			$lectures = $user->getLectures()->map(function (LectureReservation $lectureReservation) {
+				return $lectureReservation->getClassroomReservation();
+			});
+			return $this->json($lectures,200, [], ["groups" => ["classroomReservation"]]);
+		}
 	}
 
 	#[Route('/classroomReservations', methods: 'POST')]

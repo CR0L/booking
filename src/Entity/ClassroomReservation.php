@@ -34,6 +34,7 @@ class ClassroomReservation
     private $end;
 
     #[ORM\OneToMany(mappedBy: 'classroomReservation', targetEntity: LectureReservation::class)]
+	#[Groups(['canSeeStudents'])]
     private $lectureReservations;
 
     #[ORM\Column(type: 'integer', nullable: true)]

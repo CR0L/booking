@@ -17,11 +17,11 @@ class LectureReservation
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'lectures')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['canSeeStudents'])]
     private $reservedBy;
 
     #[ORM\ManyToOne(targetEntity: ClassroomReservation::class, inversedBy: 'lectureReservations')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['classroomReservation'])]
     private $classroomReservation;
 
     public function getId(): ?int
